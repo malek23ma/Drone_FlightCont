@@ -1,8 +1,77 @@
 # Drone_FlightCont
 
+[![build](https://github.com/malek23ma/Drone_FlightCont/actions/workflows/build.yml/badge.svg)](https://github.com/malek23ma/Drone_FlightCont/actions/workflows/build.yml)
+![MCU](https://img.shields.io/badge/MCU-ESP32--S3-E7352C)
+![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.5-blue)
+![Language](https://img.shields.io/badge/language-C-555555)
+![Next](https://img.shields.io/badge/next-STM32H753-03234B)
+
 A from-scratch quadrotor flight controller for the **ESP32-S3**, written on ESP-IDF and FreeRTOS. Raw sensors in, Madgwick AHRS, cascaded PID, motors out. No Betaflight, no ArduPilot, no off-the-shelf flight stack: every driver, filter and control loop in this repository was written for this aircraft.
 
 > **Experimental firmware.** It has flown, and it has crashed. It is not airworthy and not certified. There is no plausibility gate on the fusion input yet. Do not put it on an aircraft you care about.
+
+<!-- PHOTO: docs/img/drone.jpg goes here -->
+
+## At a glance
+
+| | |
+|---|---|
+| **Flight controller** | ESP32-S3, ESP-IDF 5.5 + FreeRTOS, written in C from scratch |
+| **Estimation** | Madgwick AHRS (9-DOF, 6-DOF fallback), 4-state vertical Kalman filter (accelerometer + barometer + ToF), 6-state horizontal Kalman filter (accelerometer + GPS) |
+| **Control** | Cascaded PID, angle loop → rate loop at 250 Hz, Quad-X mixer with airmode |
+| **Sensors** | IMU, barometer, magnetometer, ToF rangefinder, optical flow, GPS, pack voltage monitor |
+| **Tooling** | 250 Hz blackbox on microSD, live WiFi dashboard through an ESP32-C6, Python tools for calibration, log decoding and flight replay, host tests in CI |
+| **Status** | Flown by hand, summer 2026. Now moving to the **STM32H753**, see [Roadmap](#roadmap) |
+
+## How it works
+
+```mermaid
+flowchart LR
+    subgraph S[Sensors]
+        IMU[LSM6DSOX IMU<br/>SPI, DRDY ~416 Hz]
+        MAG[MMC5603<br/>magnetometer]
+        BARO[DPS310<br/>barometer]
+        TOF[VL53L0X<br/>ToF]
+        GPS[TBS M10 GPS<br/>UBX 10 Hz]
+    end
+    RC[FS-iA6B receiver<br/>iBUS]
+
+    IMU --> AHRS[Madgwick AHRS<br/>gyro low-pass + notch]
+    MAG --> AHRS
+    AHRS -- earth-frame accel --> VKF[Vertical Kalman<br/>4 states]
+    AHRS -- earth-frame accel --> HKF[Horizontal Kalman<br/>6 states]
+    BARO --> VKF
+    TOF --> VKF
+    GPS --> HKF
+
+    AHRS --> PID[Cascaded PID<br/>angle → rate, 250 Hz]
+    VKF --> PID
+    HKF --> PID
+    RC --> PID
+    PID --> MIX[Quad-X mixer<br/>airmode] --> ESC[4 ESCs<br/>PWM 400 Hz]
+
+    PID --> BB[(microSD<br/>blackbox)]
+    PID --> C6[ESP32-C6 bridge] -. WiFi .-> DASH[Live web dashboard]
+```
+
+## Roadmap
+
+### Done on the ESP32-S3
+
+- [x] Own drivers for every part: LSM6DSOX, DPS310, MS5611, MMC5603, VL53L0X, INA226, PMW3901, TBS M10 (UBX), iBUS
+- [x] Attitude, altitude and GPS velocity/position estimation
+- [x] Manual flight with a pre-arm gate, failsafes and a 200 ms watchdog. Altitude hold and velocity hold are written and off by default
+- [x] 250 Hz SD blackbox, decode and replay tools, live dashboard over an ESP32-C6
+- [x] IMU freeze traced to the chip's I2C/I3C interface listening on the SPI lines. After the fix: 0 faults in 63.5 minutes armed
+- [x] GNSS jamming and spoofing monitor (observer only)
+
+### Next
+
+- [ ] Port to the STM32H753 (in progress)
+- [ ] Optical-flow position hold: written and fused into the estimator, waiting for its first flight
+- [ ] Plausibility gate on the fusion inputs, the missing safety layer named in the warning above
+- [ ] Battery-sag throttle compensation (`thr_vcomp`): written, not flown yet
+- [ ] A custom PCB to replace the hand-wired harness
 
 ## Hardware
 
@@ -23,7 +92,8 @@ A from-scratch quadrotor flight controller for the **ESP32-S3**, written on ESP-
 - **Flight controller:** ESP32-S3 R8 on a DevKitC-1 v1.1 (16 MB flash, 8 MB octal PSRAM)
 - **Telemetry bridge:** ESP32-C6 (XIAO) over UART, serving a live web dashboard (`tools/c6_wifi_rc`)
 
-### Sensors and pins
+<details>
+<summary><b>Sensors and pins</b></summary>
 
 | Device | Role | Bus | Address / pins |
 |---|---|---|---|
@@ -41,6 +111,8 @@ A from-scratch quadrotor flight controller for the **ESP32-S3**, written on ESP-
 | ESP32-C6 | Telemetry link | UART2 @ 921600 | S3 TX 47, RX 21 |
 
 Both I2C buses run at **100 kHz** on the internal pull-ups; see `components/i2c_all/i2c_all.h` before raising it. On this board GPIO 33-37 are bonded to the octal PSRAM, GPIO 38 drives the on-board RGB LED, and GPIO 43/44 are shared with the second USB-C port's serial chip; none of them are usable for peripherals.
+
+</details>
 
 ## Software architecture
 
@@ -64,7 +136,8 @@ Both I2C buses run at **100 kHz** on the internal pull-ups; see `components/i2c_
 
 The blackbox samples a ~416 Hz producer at 250 Hz with no anti-aliasing, so blackbox spectra fold about 125 Hz.
 
-## Repository layout
+<details>
+<summary><b>Repository layout</b></summary>
 
 | Path | Contents |
 |---|---|
@@ -81,6 +154,8 @@ The blackbox samples a ~416 Hz producer at 250 Hz with no anti-aliasing, so blac
 | `tools/` | host tools: blackbox pull/decode, calibration, replay harnesses, host tests |
 | `tools/c6_wifi_rc/` | ESP32-C6 telemetry bridge firmware and the embedded dashboard |
 | `tools/esc_cal_s3`, `sd_test_s3`, `mmc_test` | small bench firmwares for bring-up |
+
+</details>
 
 ## Build and flash
 

@@ -210,7 +210,7 @@ def main():
 
         print("\nreading plausibility - reject, never clamp")
         check("sea level 1013 mbar at 20 C accepted", H.lib.m_rplaus(2000, 101325), 1)
-        check("Bursa summer, 35 C, 1005 mbar accepted", H.lib.m_rplaus(3500, 100500), 1)
+        check("Istanbul summer, 35 C, 1005 mbar accepted", H.lib.m_rplaus(3500, 100500), 1)
         check("zero pressure rejected", H.lib.m_rplaus(2000, 0), 0)
         check("1300 mbar rejected", H.lib.m_rplaus(2000, 130000), 0)
         check("-50 C rejected", H.lib.m_rplaus(-5000, 101325), 0)

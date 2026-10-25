@@ -10,7 +10,7 @@ drift comes from. the author wants the CAUSE found before the part is replaced.
 
 WHAT THE GATE IS (fusion.c:861): accept only 10 uT < |B| < 120 uT.
 Two facts make the lower bound the one to watch:
-  * the MMC5603 READS ABOUT HALF SCALE, so Bursa's ~48 uT field
+  * the MMC5603 READS ABOUT HALF SCALE, so Istanbul's ~48 uT field
     arrives as ~24 uT - a factor of 2.4 above the floor, not 4.8
   * the hard-iron calibration has never been done, so the measured sphere
     is OFFSET from the origin. An offset sphere's magnitude changes with
@@ -218,7 +218,7 @@ def main(argv):
         print("  the signature of motor noise or of hard iron - both would")
         print("  track something. A flat rate on a part that reads HALF")
         print("  SCALE points at the gate itself: 10 uT is only ~2.4x below")
-        print("  a half-scale Bursa field. Six-face tumble first.")
+        print("  a half-scale Istanbul field. Six-face tumble first.")
     elif top == "throttle" and topmono < 0.35:
         print("  READING, in two parts.")
         print()

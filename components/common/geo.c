@@ -98,7 +98,7 @@ int geo_to_ned(const geo_home_t *h, int32_t lat_1e7, int32_t lon_1e7,
 
     /* Wrap the longitude difference into +-180 deg so a home point beside
      * the antimeridian does not read as most of the way round the planet.
-     * Irrelevant in Bursa; costs three lines and removes a whole class of
+     * Irrelevant in Istanbul; costs three lines and removes a whole class of
      * nonsense number. */
     if (dlon > 1800000000LL) dlon -= 3600000000LL;
     else if (dlon < -1800000000LL) dlon += 3600000000LL;

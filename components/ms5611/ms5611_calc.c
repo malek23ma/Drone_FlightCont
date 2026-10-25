@@ -72,7 +72,7 @@ void ms5611_compensate(const ms5611_cal_t *cal, uint32_t d1, uint32_t d2,
     int64_t off  = ((int64_t)cal->c2 << 16) + (((int64_t)cal->c4 * dT) >> 7);
     int64_t sens = ((int64_t)cal->c1 << 15) + (((int64_t)cal->c3 * dT) >> 8);
 
-    /* Second order, below 20 C. The aircraft flies in Bursa winters and
+    /* Second order, below 20 C. The aircraft flies in Istanbul winters and
      * the correction is tens of pascals - small, but it is free and the
      * datasheet's own example does not exercise it, so it is the half most
      * likely to be typed in wrong and never noticed. */
